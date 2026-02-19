@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aperiodic-opa"
+version = "0.1.0"
+description = "Minimax synthesis of aperiodic optical phased arrays over a full steering range"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Amir Masominia" }]
+requires-python = ">=3.10"
+keywords = ["optical phased array", "LiDAR", "beam steering", "sparse array", "aperiodic array",
+            "sidelobe", "minimax", "linear programming", "silicon photonics"]
+dependencies = ["numpy>=1.24", "scipy>=1.11", "finufft>=2.2", "matplotlib>=3.7"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "ruff>=0.5"]
+gds = ["gdstk>=0.9"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "NPY"]
+ignore = ["B905"]
