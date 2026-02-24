@@ -1,0 +1,237 @@
+<title>Aperiodic OPA Bench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f3f5f7; --panel: #ffffff; --ink: #121820; --ink2: #4f5a66; --line: #dbe1e8; --soft: #e9eef3;
+  --ours: #2a78d6; --pso: #8a949f; --uni: #e0602f; --pub: #c47a00; --good: #13805a;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1319; --panel: #151c24; --ink: #e8edf2; --ink2: #9aa6b2; --line: #26313c; --soft: #1c252f;
+  --ours: #4a93ec; --pso: #7d8894; --uni: #f07a4a; --pub: #e0a030; --good: #2fb383; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e1319; --panel: #151c24; --ink: #e8edf2; --ink2: #9aa6b2; --line: #26313c; --soft: #1c252f;
+  --ours: #4a93ec; --pso: #7d8894; --uni: #f07a4a; --pub: #e0a030; --good: #2fb383; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 44px }
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px }
+header { display: grid; gap: 8px }
+.eyebrow { font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink2) }
+h1 { font: 800 clamp(30px, 4.6vw, 46px)/1.02 var(--display); letter-spacing: -.01em; margin: 0; text-wrap: balance }
+.lede { margin: 0; color: var(--ink2); max-width: 70ch }
+.lede b { color: var(--ink); font-weight: 600 }
+.rail { display: flex; flex-wrap: wrap; gap: 8px }
+.rail button { all: unset; cursor: pointer; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel);
+  display: grid; gap: 1px; min-width: 150px }
+.rail button[aria-pressed="true"] { border-color: var(--ours); box-shadow: inset 0 -3px 0 var(--ours) }
+.rail .t { font: 700 14px var(--display) }
+.rail .s { font: 12px var(--mono); color: var(--ink2) }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ours); outline-offset: 2px }
+.bench { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start }
+.screen, .readout, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-width: 0 }
+.screen { display: grid; gap: 10px }
+.screen h2, .card h2 { margin: 0; font: 700 15px var(--display); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap }
+.screen h2 span, .card h2 span { font: 400 12px var(--mono); color: var(--ink2) }
+canvas { display: block; width: 100%; touch-action: pan-y }
+#ff { height: 300px }
+#scan { height: 170px }
+#strip { height: 64px }
+.steer { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; font: 13px var(--mono); color: var(--ink2) }
+.steer input { width: 100%; accent-color: var(--ours) }
+.steer output { color: var(--ink); font-weight: 500; min-width: 6ch; text-align: right; font-variant-numeric: tabular-nums }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px }
+.toggle { all: unset; cursor: pointer; display: inline-flex; gap: 7px; align-items: center; padding: 4px 10px; border: 1px solid var(--line);
+  border-radius: 999px; font: 13px var(--body) }
+.toggle[aria-pressed="false"] { opacity: .45 }
+.sw { width: 14px; height: 3px; border-radius: 2px; display: inline-block }
+.readout { display: grid; gap: 14px }
+.metric { display: grid; gap: 2px; border-bottom: 1px solid var(--line); padding-bottom: 12px }
+.metric:last-child { border-bottom: 0; padding-bottom: 0 }
+.metric .k { font: 500 11px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--ink2) }
+.metric .v { font: 800 30px/1.1 var(--display); font-variant-numeric: tabular-nums }
+.metric .v small { font: 500 14px var(--mono); color: var(--ink2) }
+.metric .n { font-size: 13px; color: var(--ink2) }
+.gain { color: var(--good) }
+.below { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px }
+.tip { font: 12px var(--mono); color: var(--ink2); min-height: 1.5em }
+footer { color: var(--ink2); font-size: 14px; max-width: 80ch; display: grid; gap: 6px }
+footer code { font-family: var(--mono); font-size: 13px }
+@media (max-width: 860px) { .bench, .below { grid-template-columns: 1fr } #ff { height: 240px } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">aperiodic-opa · far-field bench · λ = 1550 nm</div>
+    <h1>Aperiodic OPA Bench</h1>
+    <p class="lede">Five published sparse optical phased arrays, re-solved at <b>their own constraints</b>: emitter count, minimum pitch, aperture, element pattern and steering range. Drag the steering angle and compare the far field of the minimax layout with a particle-swarm layout scored on the same metric and with a uniform array at the mean pitch. Levels are relative to the main beam.</p>
+  </header>
+
+  <nav class="rail" id="rail" aria-label="Published design"></nav>
+
+  <section class="bench">
+    <div class="screen">
+      <h2 id="title">Far field <span id="sub"></span></h2>
+      <canvas id="ff" aria-label="Far-field intensity in dB against angle"></canvas>
+      <div class="tip" id="tip">Move over the trace to read values.</div>
+      <div class="steer"><label for="ang">Beam</label><input id="ang" type="range" min="-60" max="60" step="0.5" value="-60"><output id="angv" for="ang">−60.0°</output></div>
+      <div class="toggles" id="toggles"></div>
+    </div>
+    <aside class="readout" aria-live="polite">
+      <div class="metric"><span class="k">PSL at this angle</span><span class="v" id="mNow">–</span><span class="n" id="mNowN"></span></div>
+      <div class="metric"><span class="k">Worst over the range, this work</span><span class="v" id="mOurs">–</span><span class="n" id="mOursN"></span></div>
+      <div class="metric"><span class="k">Worst over the range, published</span><span class="v" id="mPub">–</span><span class="n" id="mPubN"></span></div>
+      <div class="metric"><span class="k">Improvement</span><span class="v gain" id="mGain">–</span><span class="n">same emitters, same pitch rules</span></div>
+    </aside>
+  </section>
+
+  <section class="below">
+    <div class="card"><h2>Sidelobe level across the steering range <span>dB</span></h2><canvas id="scan" aria-label="Peak sidelobe level against steering angle"></canvas></div>
+    <div class="card"><h2>Emitter positions <span id="apert"></span></h2><canvas id="strip" aria-label="Emitter positions"></canvas>
+      <div class="tip" id="gaps"></div></div>
+  </section>
+
+  <footer>
+    <div>The far field is <code>|E(u)|² |Σ exp(i k xₙ (u − u₀))|²</code> with the published element pattern, computed live in your browser from the stored positions. The worst-case numbers come from the repository's evaluator, which is exact over the continuous steering range. The particle-swarm layout is the best of three runs (80 particles, up to 1000 iterations) scored on exactly the same metric.</div>
+    <div id="cite"></div>
+  </footer>
+</div>
+
+<script id="bench-data" type="application/json">{"cases":[{"id":"zang2025-32","short":"Zang 2025 \u00b7 32","title":"Zang 2025, 32 emitters","n":32,"steer":60.0,"lambda":1.55,"gaps":"2.00\u20135","pattern":{"type":"slit","width":0.5},"pattern_label":"slit 0.5 um","aperture":103.0,"ours":[0.0,2.2678,5.4371,7.4371,11.2498,14.188,16.3104,18.9554,23.4617,26.8312,30.5689,32.5689,35.552,38.5473,43.5279,48.2015,50.7148,53.4096,56.5324,60.3086,64.0282,66.5002,70.5249,73.9581,77.3063,80.0642,84.1881,88.3762,92.7079,94.7079,99.2,103.0],"uniform":[0.0,3.3226,6.6452,9.9677,13.2903,16.6129,19.9355,23.2581,26.5806,29.9032,33.2258,36.5484,39.871,43.1935,46.5161,49.8387,53.1613,56.4839,59.8065,63.129,66.4516,69.7742,73.0968,76.4194,79.7419,83.0645,86.3871,89.7097,93.0323,96.3548,99.6774,103.0],"ours_db":-11.484519074630338,"floor_db":-14.731339392119107,"reported_db":-9.12,"reported_note":"PSLL from 12.26 dB down to 9.12 dB across the +/-60 deg range","citation":"Z. Zang, J. Wu, Q. Huang, Photonics 12, 210 (2025)","assumptions":"","scan_angles":[-60.0,-59.0,-58.0,-57.0,-56.0,-55.0,-54.0,-53.0,-52.0,-51.0,-50.0,-49.0,-48.0,-47.0,-46.0,-45.0,-44.0,-43.0,-42.0,-41.0,-40.0,-39.0,-38.0,-37.0,-36.0,-35.0,-34.0,-33.0,-32.0,-31.0,-30.0,-29.0,-28.0,-27.0,-26.0,-25.0,-24.0,-23.0,-22.0,-21.0,-20.0,-19.0,-18.0,-17.0,-16.0,-15.0,-14.0,-13.0,-12.0,-11.0,-10.0,-9.0,-8.0,-7.0,-6.0,-5.0,-4.0,-3.0,-2.0,-1.0,0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0,13.0,14.0,15.0,16.0,17.0,18.0,19.0,20.0,21.0,22.0,23.0,24.0,25.0,26.0,27.0,28.0,29.0,30.0,31.0,32.0,33.0,34.0,35.0,36.0,37.0,38.0,39.0,40.0,41.0,42.0,43.0,44.0,45.0,46.0,47.0,48.0,49.0,50.0,51.0,52.0,53.0,54.0,55.0,56.0,57.0,58.0,59.0,60.0],"scan_db":[-11.4845,-11.4988,-11.5118,-11.5251,-11.5378,-11.5502,-11.5628,-11.5757,-11.5889,-11.6023,-11.616,-11.6299,-11.6441,-11.6585,-11.6731,-11.688,-11.7031,-11.7184,-11.7339,-11.7496,-11.7655,-11.7816,-11.7979,-11.8144,-11.831,-11.8479,-11.8648,-11.882,-11.8993,-11.9168,-11.9344,-11.9522,-11.9701,-11.9881,-12.0063,-12.0246,-12.043,-12.0615,-12.0802,-12.0989,-12.1178,-12.1367,-12.1558,-12.1749,-12.1942,-12.2135,-12.2329,-12.2524,-12.2719,-12.2915,-12.3112,-12.331,-12.3508,-12.3707,-12.3906,-12.4106,-12.4306,-12.4507,-12.4708,-12.4909,-12.5111,-12.4909,-12.4708,-12.4507,-12.4306,-12.4106,-12.3906,-12.3707,-12.3508,-12.331,-12.3112,-12.2915,-12.2719,-12.2524,-12.2329,-12.2135,-12.1942,-12.1749,-12.1558,-12.1367,-12.1178,-12.0989,-12.0802,-12.0615,-12.043,-12.0246,-12.0063,-11.9881,-11.9701,-11.9522,-11.9344,-11.9168,-11.8993,-11.882,-11.8648,-11.8479,-11.831,-11.8144,-11.7979,-11.7816,-11.7655,-11.7496,-11.7339,-11.7184,-11.7031,-11.688,-11.6731,-11.6585,-11.6441,-11.6299,-11.616,-11.6023,-11.5889,-11.5757,-11.5628,-11.5502,-11.5378,-11.5251,-11.5118,-11.4988,-11.4845],"worst_angle":-60.0,"pso":[0.0,3.0564,6.1322,8.9613,12.4193,15.9188,17.9614,21.6124,23.6315,26.0237,30.9825,35.6392,39.379,43.396,45.9629,48.8998,51.3712,56.3079,59.7164,62.6559,67.6216,69.622,71.6222,74.2759,76.2767,80.527,83.9047,88.7041,92.5445,97.0023,100.9945,103.0]},{"id":"zang2025-64","short":"Zang 2025 \u00b7 64","title":"Zang 2025, 64 emitters","n":64,"steer":60.0,"lambda":1.55,"gaps":"2.00\u20135","pattern":{"type":"slit","width":0.5},"pattern_label":"slit 0.5 um","aperture":208.0,"ours":[0.0,2.003,4.5677,9.0692,13.7051,17.5485,19.5485,23.2619,27.6623,31.9943,34.8694,36.9673,40.8714,45.5506,47.6726,49.9438,53.9731,57.9982,61.8152,63.8152,65.8576,69.4436,72.4126,76.0234,78.2604,81.5065,83.5065,85.9875,88.4763,93.4763,96.4812,99.5386,101.915,105.4587,108.6032,112.5345,115.1757,117.9561,122.8461,125.4701,129.2534,132.6167,135.2216,138.6031,141.3545,143.5257,148.1941,151.7705,154.7792,157.9629,162.8986,166.3326,169.5595,172.7157,176.8366,180.5104,183.3134,186.0602,188.3158,191.5899,195.8053,200.8053,205.0627,208.0],"uniform":[0.0,3.3016,6.6032,9.9048,13.2063,16.5079,19.8095,23.1111,26.4127,29.7143,33.0159,36.3175,39.619,42.9206,46.2222,49.5238,52.8254,56.127,59.4286,62.7302,66.0317,69.3333,72.6349,75.9365,79.2381,82.5397,85.8413,89.1429,92.4444,95.746,99.0476,102.3492,105.6508,108.9524,112.254,115.5556,118.8571,122.1587,125.4603,128.7619,132.0635,135.3651,138.6667,141.9683,145.2698,148.5714,151.873,155.1746,158.4762,161.7778,165.0794,168.381,171.6825,174.9841,178.2857,181.5873,184.8889,188.1905,191.4921,194.7937,198.0952,201.3968,204.6984,208.0],"ours_db":-14.347799178685284,"floor_db":-17.811056501415575,"reported_db":-11.75,"reported_note":"PSLL from 13.27 dB down to 11.75 dB across the +/-60 deg range","citation":"Z. Zang, J. Wu, Q. Huang, Photonics 12, 210 (2025)","assumptions":"","scan_angles":[-60.0,-59.0,-58.0,-57.0,-56.0,-55.0,-54.0,-53.0,-52.0,-51.0,-50.0,-49.0,-48.0,-47.0,-46.0,-45.0,-44.0,-43.0,-42.0,-41.0,-40.0,-39.0,-38.0,-37.0,-36.0,-35.0,-34.0,-33.0,-32.0,-31.0,-30.0,-29.0,-28.0,-27.0,-26.0,-25.0,-24.0,-23.0,-22.0,-21.0,-20.0,-19.0,-18.0,-17.0,-16.0,-15.0,-14.0,-13.0,-12.0,-11.0,-10.0,-9.0,-8.0,-7.0,-6.0,-5.0,-4.0,-3.0,-2.0,-1.0,0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0,13.0,14.0,15.0,16.0,17.0,18.0,19.0,20.0,21.0,22.0,23.0,24.0,25.0,26.0,27.0,28.0,29.0,30.0,31.0,32.0,33.0,34.0,35.0,36.0,37.0,38.0,39.0,40.0,41.0,42.0,43.0,44.0,45.0,46.0,47.0,48.0,49.0,50.0,51.0,52.0,53.0,54.0,55.0,56.0,57.0,58.0,59.0,60.0],"scan_db":[-14.3478,-14.3613,-14.3741,-14.3867,-14.3997,-14.4129,-14.4265,-14.4349,-14.4353,-14.4357,-14.4361,-14.4365,-14.4369,-14.4373,-14.4377,-14.4382,-14.4386,-14.439,-14.4395,-14.4399,-14.4404,-14.4409,-14.4413,-14.4418,-14.4423,-14.4428,-14.4432,-14.4437,-14.4442,-14.4447,-14.4452,-14.4457,-14.4462,-14.4467,-14.4473,-14.4478,-14.4483,-14.4488,-14.4493,-14.4499,-14.4504,-14.4509,-14.4515,-14.452,-14.4525,-14.4531,-14.4536,-14.4541,-14.4547,-14.4552,-14.4558,-14.4563,-14.4569,-14.4574,-14.458,-14.4585,-14.4591,-14.4596,-14.4602,-14.4607,-14.4613,-14.4607,-14.4602,-14.4596,-14.4591,-14.4585,-14.458,-14.4574,-14.4569,-14.4563,-14.4558,-14.4552,-14.4547,-14.4541,-14.4536,-14.4531,-14.4525,-14.452,-14.4515,-14.4509,-14.4504,-14.4499,-14.4493,-14.4488,-14.4483,-14.4478,-14.4473,-14.4467,-14.4462,-14.4457,-14.4452,-14.4447,-14.4442,-14.4437,-14.4432,-14.4428,-14.4423,-14.4418,-14.4413,-14.4409,-14.4404,-14.4399,-14.4395,-14.439,-14.4386,-14.4382,-14.4377,-14.4373,-14.4369,-14.4365,-14.4361,-14.4357,-14.4353,-14.4349,-14.4265,-14.4129,-14.3997,-14.3867,-14.3741,-14.3613,-14.3478],"worst_angle":-60.0,"pso":[0.0,3.0502,6.4718,9.915,13.4502,16.0609,19.8783,22.8969,25.7351,28.7022,31.4135,34.4047,38.9674,40.9694,44.1801,47.3144,49.3186,53.9589,57.3692,61.7757,65.8146,69.373,71.373,73.8915,76.5336,80.5287,84.6789,89.0717,92.2704,94.3298,97.1554,101.5692,103.8876,108.8453,113.796,115.8321,118.0257,122.822,126.8805,129.5166,132.7274,137.725,140.1439,144.8947,148.9776,153.8286,156.6693,159.4372,162.439,164.439,168.0968,171.6097,173.7199,177.9962,181.9292,185.6539,188.4299,192.1726,195.0355,197.0424,199.7004,203.3302,205.9839,208.0]},{"id":"ma2024-128","short":"Ma 2024 \u00b7 128","title":"Ma 2024, 128 emitters","n":128,"steer":47.0,"lambda":1.55,"gaps":"5.00\u201310","pattern":{"type":"gaussian","angle_deg":48.6,"drop_db":1.0},"pattern_label":"gaussian, -1 dB at 48.6 deg","aperture":919.870461,"ours":[0.0,6.9764,12.4045,17.4045,22.4045,29.1982,35.1253,44.2781,54.1888,60.9361,67.3726,73.3602,82.9775,92.5382,101.4021,110.5021,116.0897,122.258,131.2505,140.0502,149.2612,159.2612,165.873,172.9565,180.1929,186.6401,191.6401,198.8053,205.7829,213.7764,221.7139,228.348,233.3957,239.9601,246.1507,251.2883,260.3065,270.0495,277.3869,283.7656,293.126,301.654,308.4971,317.2182,324.7296,330.0029,335.0029,342.5486,351.0656,360.9404,367.2096,376.5016,383.8034,388.8034,393.9261,399.5393,404.7138,410.0434,417.6033,426.1432,431.1432,438.6974,444.9487,451.0739,459.7909,465.6872,471.1659,476.9796,482.8418,490.7724,496.6435,501.6435,507.1644,512.1644,518.0196,523.0196,529.0943,534.626,539.8248,546.7138,554.1138,559.1205,564.5619,570.3579,577.9429,584.5266,591.9899,597.5036,605.1914,612.0486,622.0486,632.0486,640.8251,648.2826,656.3774,661.3774,666.6225,671.6268,681.3023,691.2919,701.1603,709.6142,719.4948,727.2342,736.2921,741.2921,749.6779,756.2725,761.9062,771.9062,780.0703,789.4205,798.8172,807.9054,815.8882,825.0571,834.2813,844.2501,853.2081,861.3617,869.7588,875.8816,884.2577,890.1208,897.5849,906.4211,914.8705,919.8705],"uniform":[0.0,7.2431,14.4861,21.7292,28.9723,36.2154,43.4584,50.7015,57.9446,65.1877,72.4307,79.6738,86.9169,94.16,101.403,108.6461,115.8892,123.1323,130.3753,137.6184,144.8615,152.1046,159.3476,166.5907,173.8338,181.0769,188.3199,195.563,202.8061,210.0492,217.2922,224.5353,231.7784,239.0215,246.2645,253.5076,260.7507,267.9938,275.2368,282.4799,289.723,296.9661,304.2091,311.4522,318.6953,325.9384,333.1814,340.4245,347.6676,354.9107,362.1537,369.3968,376.6399,383.8829,391.126,398.3691,405.6122,412.8552,420.0983,427.3414,434.5845,441.8275,449.0706,456.3137,463.5568,470.7998,478.0429,485.286,492.5291,499.7721,507.0152,514.2583,521.5014,528.7444,535.9875,543.2306,550.4737,557.7167,564.9598,572.2029,579.446,586.689,593.9321,601.1752,608.4183,615.6613,622.9044,630.1475,637.3906,644.6336,651.8767,659.1198,666.3629,673.6059,680.849,688.0921,695.3352,702.5782,709.8213,717.0644,724.3074,731.5505,738.7936,746.0367,753.2797,760.5228,767.7659,775.009,782.252,789.4951,796.7382,803.9813,811.2243,818.4674,825.7105,832.9536,840.1966,847.4397,854.6828,861.9259,869.1689,876.412,883.6551,890.8982,898.1412,905.3843,912.6274,919.8705],"ours_db":-16.221129094153223,"floor_db":-20.81043020105813,"reported_db":-11.9,"reported_note":"side-lobe suppression between 13.4 dB and 11.9 dB over the 94 deg field of view","citation":"Ma et al., Eng. Res. Express (2024)","assumptions":"Modelling choices: element pattern modelled as Gaussian with the reported 1 dB width of 97.2 deg; aperture left free within the gap bounds.","scan_angles":[-47.0,-46.0,-45.0,-44.0,-43.0,-42.0,-41.0,-40.0,-39.0,-38.0,-37.0,-36.0,-35.0,-34.0,-33.0,-32.0,-31.0,-30.0,-29.0,-28.0,-27.0,-26.0,-25.0,-24.0,-23.0,-22.0,-21.0,-20.0,-19.0,-18.0,-17.0,-16.0,-15.0,-14.0,-13.0,-12.0,-11.0,-10.0,-9.0,-8.0,-7.0,-6.0,-5.0,-4.0,-3.0,-2.0,-1.0,0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0,13.0,14.0,15.0,16.0,17.0,18.0,19.0,20.0,21.0,22.0,23.0,24.0,25.0,26.0,27.0,28.0,29.0,30.0,31.0,32.0,33.0,34.0,35.0,36.0,37.0,38.0,39.0,40.0,41.0,42.0,43.0,44.0,45.0,46.0,47.0],"scan_db":[-16.2211,-16.2216,-16.2217,-16.2218,-16.2219,-16.222,-16.2222,-16.2223,-16.2224,-16.2225,-16.2226,-16.2227,-16.2229,-16.223,-16.2231,-16.2232,-16.2233,-16.2235,-16.2236,-16.2237,-16.2239,-16.224,-16.2241,-16.2243,-16.2244,-16.2245,-16.2247,-16.2248,-16.225,-16.2251,-16.2252,-16.2254,-16.2255,-16.2257,-16.2258,-16.226,-16.2261,-16.2263,-16.2264,-16.2265,-16.2267,-16.2268,-16.227,-16.2271,-16.2273,-16.2274,-16.2276,-16.2277,-16.2276,-16.2274,-16.2273,-16.2271,-16.227,-16.2268,-16.2267,-16.2265,-16.2264,-16.2263,-16.2261,-16.226,-16.2258,-16.2257,-16.2255,-16.2254,-16.2252,-16.2251,-16.225,-16.2248,-16.2247,-16.2245,-16.2244,-16.2243,-16.2241,-16.224,-16.2239,-16.2237,-16.2236,-16.2235,-16.2233,-16.2232,-16.2231,-16.223,-16.2229,-16.2227,-16.2226,-16.2225,-16.2224,-16.2223,-16.2222,-16.222,-16.2219,-16.2218,-16.2217,-16.2216,-16.2211],"worst_angle":-47.0},{"id":"zhuang2018-128","short":"Zhuang 2018 \u00b7 128","title":"Zhuang 2018, 128 emitters","n":128,"steer":82.0,"lambda":1.55,"gaps":"\u2265 4.14","pattern":{"type":"isotropic"},"pattern_label":"isotropic","aperture":1238.25,"ours":[0.0,6.9546,12.5897,24.3655,28.6358,34.7651,42.9903,55.0038,59.6953,70.033,84.3715,94.2894,101.819,120.369,129.6074,137.5635,155.9319,164.9737,179.4288,189.0087,205.7017,223.2204,239.1279,251.7896,261.3522,276.1646,284.0645,289.6903,299.202,313.1117,319.3753,326.0255,333.6596,347.3866,351.5251,367.4668,377.917,389.9237,407.6002,411.999,421.4934,425.6319,437.7209,444.7023,452.9527,466.3819,472.4047,481.3573,485.4958,491.1164,498.5762,512.7787,517.2123,528.2084,534.4074,545.3835,551.4404,556.334,566.6682,570.8067,589.1345,600.0462,610.3052,615.2388,628.3943,633.197,641.4486,655.8237,660.1659,665.5705,670.7796,682.2075,686.7238,698.5997,714.2783,719.2828,731.9625,738.8444,751.3275,762.5842,766.7227,771.2254,783.0702,795.1394,813.2292,824.5565,831.2482,835.7684,841.1213,851.3331,861.2217,872.174,884.6123,891.8547,898.1513,903.5871,918.636,924.4293,930.737,936.7796,941.0265,954.7122,964.3594,970.4588,975.6971,992.2726,1000.6965,1015.5212,1034.9971,1045.9279,1055.0523,1069.8794,1084.838,1098.531,1111.872,1127.4262,1141.6367,1149.1641,1153.3026,1167.091,1172.0606,1183.2462,1191.1199,1200.9474,1210.0109,1216.8568,1229.7347,1238.25],"uniform":[0.0,9.75,19.5,29.25,39.0,48.75,58.5,68.25,78.0,87.75,97.5,107.25,117.0,126.75,136.5,146.25,156.0,165.75,175.5,185.25,195.0,204.75,214.5,224.25,234.0,243.75,253.5,263.25,273.0,282.75,292.5,302.25,312.0,321.75,331.5,341.25,351.0,360.75,370.5,380.25,390.0,399.75,409.5,419.25,429.0,438.75,448.5,458.25,468.0,477.75,487.5,497.25,507.0,516.75,526.5,536.25,546.0,555.75,565.5,575.25,585.0,594.75,604.5,614.25,624.0,633.75,643.5,653.25,663.0,672.75,682.5,692.25,702.0,711.75,721.5,731.25,741.0,750.75,760.5,770.25,780.0,789.75,799.5,809.25,819.0,828.75,838.5,848.25,858.0,867.75,877.5,887.25,897.0,906.75,916.5,926.25,936.0,945.75,955.5,965.25,975.0,984.75,994.5,1004.25,1014.0,1023.75,1033.5,1043.25,1053.0,1062.75,1072.5,1082.25,1092.0,1101.75,1111.5,1121.25,1131.0,1140.75,1150.5,1160.25,1170.0,1179.75,1189.5,1199.25,1209.0,1218.75,1228.5,1238.25],"ours_db":-16.532117487156437,"floor_db":-21.236528274282357,"reported_db":-14.34,"reported_note":"peak side-lobe level -14.34 dB over +/-82 deg, isotropic elements","citation":"D. Zhuang et al., Opt. Express 26, 19154 (2018)","assumptions":"Modelling choices: minimum pitch 2.67 wavelengths; aperture fixed by the reported mean pitch of 9.75 um.","scan_angles":[-82.0,-81.0,-80.0,-79.0,-78.0,-77.0,-76.0,-75.0,-74.0,-73.0,-72.0,-71.0,-70.0,-69.0,-68.0,-67.0,-66.0,-65.0,-64.0,-63.0,-62.0,-61.0,-60.0,-59.0,-58.0,-57.0,-56.0,-55.0,-54.0,-53.0,-52.0,-51.0,-50.0,-49.0,-48.0,-47.0,-46.0,-45.0,-44.0,-43.0,-42.0,-41.0,-40.0,-39.0,-38.0,-37.0,-36.0,-35.0,-34.0,-33.0,-32.0,-31.0,-30.0,-29.0,-28.0,-27.0,-26.0,-25.0,-24.0,-23.0,-22.0,-21.0,-20.0,-19.0,-18.0,-17.0,-16.0,-15.0,-14.0,-13.0,-12.0,-11.0,-10.0,-9.0,-8.0,-7.0,-6.0,-5.0,-4.0,-3.0,-2.0,-1.0,0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0,13.0,14.0,15.0,16.0,17.0,18.0,19.0,20.0,21.0,22.0,23.0,24.0,25.0,26.0,27.0,28.0,29.0,30.0,31.0,32.0,33.0,34.0,35.0,36.0,37.0,38.0,39.0,40.0,41.0,42.0,43.0,44.0,45.0,46.0,47.0,48.0,49.0,50.0,51.0,52.0,53.0,54.0,55.0,56.0,57.0,58.0,59.0,60.0,61.0,62.0,63.0,64.0,65.0,66.0,67.0,68.0,69.0,70.0,71.0,72.0,73.0,74.0,75.0,76.0,77.0,78.0,79.0,80.0,81.0,82.0],"scan_db":[-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5323,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321,-16.5321],"worst_angle":-82.0},{"id":"komljenovic2017-192","short":"Komljenovic 2017 \u00b7 192","title":"Komljenovic 2017, 192 emitters","n":192,"steer":90.0,"lambda":1.55,"gaps":"\u2265 2.50","pattern":{"type":"isotropic"},"pattern_label":"isotropic","aperture":993.2,"ours":[0.0,2.9426,5.4426,10.072,13.4374,15.9374,20.0578,23.8312,26.989,30.7071,38.4392,45.6841,50.6857,60.8572,63.9475,70.7659,75.4176,82.0716,85.9366,93.8133,98.1191,102.4936,109.7933,114.4446,118.3065,133.0769,136.0669,148.355,157.2795,161.0247,178.4837,185.7673,191.0568,194.8764,197.3764,204.5473,208.5301,214.477,225.0536,230.9674,235.7681,239.4199,242.018,249.6423,255.8024,261.7501,264.2501,267.331,269.88,275.9815,284.4284,287.2175,291.4813,298.568,301.2426,307.5284,311.2014,316.1146,322.8464,326.6023,329.7613,333.5078,336.6827,339.2804,345.2821,348.2144,351.3045,354.3952,363.5685,367.2306,369.7306,373.3716,380.6957,387.2527,396.6329,399.2834,402.7155,406.3572,412.35,422.4159,426.8604,430.2007,435.2892,438.0669,443.2174,446.8307,450.5206,454.6157,459.1414,462.0865,468.5989,474.1037,480.0666,482.9649,486.6981,490.3898,496.021,499.3573,503.6973,508.6956,513.3387,516.1711,519.5817,522.625,526.1983,529.2593,537.196,543.7018,546.2626,549.2724,554.9766,558.7821,561.2821,566.8782,572.1366,575.3933,578.3783,587.6928,590.1928,595.2155,598.4156,604.4009,607.5145,611.403,616.6246,619.9093,623.1625,626.9457,629.4457,633.2906,636.973,641.6068,646.9642,652.8817,657.3452,659.8452,663.9984,673.1223,679.2856,685.7595,693.3832,698.6601,703.5487,713.0655,716.752,721.3476,728.1049,733.4066,738.9121,747.7376,754.3052,758.237,762.7537,765.9272,769.1443,775.0728,781.5506,788.2769,792.1856,801.2097,806.3594,811.5163,819.4421,824.0331,833.5518,843.0267,847.3499,852.3345,862.6103,870.0101,876.7054,883.9455,889.0333,897.3555,900.1712,908.2472,916.722,922.3857,933.5778,943.5838,950.3221,961.9673,966.3456,971.71,974.6278,977.1278,979.9409,982.4409,985.5753,988.0753,990.7,993.2],"uniform":[0.0,5.2,10.4,15.6,20.8,26.0,31.2,36.4,41.6,46.8,52.0,57.2,62.4,67.6,72.8,78.0,83.2,88.4,93.6,98.8,104.0,109.2,114.4,119.6,124.8,130.0,135.2,140.4,145.6,150.8,156.0,161.2,166.4,171.6,176.8,182.0,187.2,192.4,197.6,202.8,208.0,213.2,218.4,223.6,228.8,234.0,239.2,244.4,249.6,254.8,260.0,265.2,270.4,275.6,280.8,286.0,291.2,296.4,301.6,306.8,312.0,317.2,322.4,327.6,332.8,338.0,343.2,348.4,353.6,358.8,364.0,369.2,374.4,379.6,384.8,390.0,395.2,400.4,405.6,410.8,416.0,421.2,426.4,431.6,436.8,442.0,447.2,452.4,457.6,462.8,468.0,473.2,478.4,483.6,488.8,494.0,499.2,504.4,509.6,514.8,520.0,525.2,530.4,535.6,540.8,546.0,551.2,556.4,561.6,566.8,572.0,577.2,582.4,587.6,592.8,598.0,603.2,608.4,613.6,618.8,624.0,629.2,634.4,639.6,644.8,650.0,655.2,660.4,665.6,670.8,676.0,681.2,686.4,691.6,696.8,702.0,707.2,712.4,717.6,722.8,728.0,733.2,738.4,743.6,748.8,754.0,759.2,764.4,769.6,774.8,780.0,785.2,790.4,795.6,800.8,806.0,811.2,816.4,821.6,826.8,832.0,837.2,842.4,847.6,852.8,858.0,863.2,868.4,873.6,878.8,884.0,889.2,894.4,899.6,904.8,910.0,915.2,920.4,925.6,930.8,936.0,941.2,946.4,951.6,956.8,962.0,967.2,972.4,977.6,982.8,988.0,993.2],"ours_db":-18.99733255766236,"floor_db":-23.163828190059114,"reported_db":-13.5,"reported_note":"side-mode suppression above 13.5 dB over +/-90 deg","citation":"T. Komljenovic, R. Helkey, L. Coldren, J. E. Bowers, Opt. Express 25, 2511 (2017)","assumptions":"Modelling choices: aperture fixed by the reported 5.2 um average pitch; isotropic elements.","scan_angles":[-90.0,-89.0,-88.0,-87.0,-86.0,-85.0,-84.0,-83.0,-82.0,-81.0,-80.0,-79.0,-78.0,-77.0,-76.0,-75.0,-74.0,-73.0,-72.0,-71.0,-70.0,-69.0,-68.0,-67.0,-66.0,-65.0,-64.0,-63.0,-62.0,-61.0,-60.0,-59.0,-58.0,-57.0,-56.0,-55.0,-54.0,-53.0,-52.0,-51.0,-50.0,-49.0,-48.0,-47.0,-46.0,-45.0,-44.0,-43.0,-42.0,-41.0,-40.0,-39.0,-38.0,-37.0,-36.0,-35.0,-34.0,-33.0,-32.0,-31.0,-30.0,-29.0,-28.0,-27.0,-26.0,-25.0,-24.0,-23.0,-22.0,-21.0,-20.0,-19.0,-18.0,-17.0,-16.0,-15.0,-14.0,-13.0,-12.0,-11.0,-10.0,-9.0,-8.0,-7.0,-6.0,-5.0,-4.0,-3.0,-2.0,-1.0,0.0,1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0,13.0,14.0,15.0,16.0,17.0,18.0,19.0,20.0,21.0,22.0,23.0,24.0,25.0,26.0,27.0,28.0,29.0,30.0,31.0,32.0,33.0,34.0,35.0,36.0,37.0,38.0,39.0,40.0,41.0,42.0,43.0,44.0,45.0,46.0,47.0,48.0,49.0,50.0,51.0,52.0,53.0,54.0,55.0,56.0,57.0,58.0,59.0,60.0,61.0,62.0,63.0,64.0,65.0,66.0,67.0,68.0,69.0,70.0,71.0,72.0,73.0,74.0,75.0,76.0,77.0,78.0,79.0,80.0,81.0,82.0,83.0,84.0,85.0,86.0,87.0,88.0,89.0,90.0],"scan_db":[-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9991,-18.9991,-18.9991,-18.9991,-18.9991,-18.9991,-18.9991,-18.9991,-18.9991,-18.9991,-18.9991,-18.9991,-18.9991,-18.9991,-18.9991,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973,-18.9973],"worst_angle":-90.0}]}</script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById("bench-data").textContent);
+  const $ = (id) => document.getElementById(id);
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const SERIES = [
+    { key: "uniform", label: "Uniform, mean pitch", color: "--uni", w: 1.1 },
+    { key: "pso", label: "Particle swarm, same metric", color: "--pso", w: 1.1 },
+    { key: "ours", label: "This work", color: "--ours", w: 1.6 },
+  ];
+  const show = { uniform: false, pso: true, ours: true };
+  let ci = 0, angle = 0;
+  const fmt = (v) => (v < 0 ? "−" : "") + Math.abs(v).toFixed(2);
+
+  function pattern(c, u) {
+    if (c.pattern.type === "slit") { const a = Math.PI * c.pattern.width * u / c.lambda; return Math.abs(a) < 1e-12 ? 1 : Math.sin(a) / a; }
+    if (c.pattern.type === "gaussian") { const ur = Math.sin(c.pattern.angle_deg * Math.PI / 180); return Math.pow(10, -c.pattern.drop_db / 20 * (u / ur) * (u / ur)); }
+    return 1;
+  }
+  function farfield(c, xs, u0, us) {
+    const k = 2 * Math.PI / c.lambda, out = new Float64Array(us.length), e0 = pattern(c, u0) ** 2 * xs.length * xs.length;
+    for (let i = 0; i < us.length; i++) {
+      const v = us[i] - u0; let re = 0, im = 0;
+      for (let n = 0; n < xs.length; n++) { const ph = k * xs[n] * v; re += Math.cos(ph); im += Math.sin(ph); }
+      out[i] = 10 * Math.log10(Math.max(pattern(c, us[i]) ** 2 * (re * re + im * im) / e0, 1e-9));
+    }
+    return out;
+  }
+  function psl(c, xs, u0) {
+    const n = Math.max(4000, Math.round(16 * c.aperture / c.lambda)), us = new Float64Array(n); for (let i = 0; i < n; i++) us[i] = -1 + 2 * i / (n - 1);
+    const db = farfield(c, xs, u0, us);
+    let ci0 = 0; for (let i = 0; i < n; i++) if (Math.abs(us[i] - u0) < Math.abs(us[ci0] - u0)) ci0 = i;
+    while (ci0 > 0 && db[ci0 - 1] > db[ci0]) ci0--; while (ci0 < n - 1 && db[ci0 + 1] > db[ci0]) ci0++;
+    let l = ci0, r = ci0; while (l > 0 && db[l - 1] < db[l]) l--; while (r < n - 1 && db[r + 1] < db[r]) r++;
+    let best = -99; for (let i = 0; i < n; i++) if ((i < l || i > r) && db[i] > best) best = db[i];
+    return best - db[ci0];
+  }
+  function fit(cv) {
+    const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    cv.width = Math.max(1, Math.round(r.width * d)); cv.height = Math.max(1, Math.round(r.height * d));
+    const ctx = cv.getContext("2d"); ctx.setTransform(d, 0, 0, d, 0, 0); return { ctx, w: r.width, h: r.height };
+  }
+
+  $("rail").innerHTML = D.cases.map((c, i) => `<button data-i="${i}" aria-pressed="${i === 0}"><span class="t">${c.short}</span><span class="s">${c.n} ch · ±${c.steer}° · ${fmt(c.ours_db)} dB</span></button>`).join("");
+  $("rail").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) select(+b.dataset.i); });
+  $("toggles").innerHTML = SERIES.map((s) => `<button class="toggle" data-k="${s.key}" aria-pressed="${show[s.key]}"><span class="sw" style="background:var(${s.color})"></span>${s.label}</button>`).join("");
+  $("toggles").addEventListener("click", (e) => { const b = e.target.closest(".toggle"); if (!b) return; show[b.dataset.k] = !show[b.dataset.k]; b.setAttribute("aria-pressed", show[b.dataset.k]); draw(); });
+  $("ang").addEventListener("input", (e) => { angle = +e.target.value; draw(); });
+
+  let TH = null;
+  function select(i) {
+    ci = i; const c = D.cases[i];
+    document.querySelectorAll("#rail button").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.i === i));
+    $("ang").min = -c.steer; $("ang").max = c.steer; angle = c.worst_angle; $("ang").value = angle;
+    $("title").firstChild.textContent = c.title + " ";
+    $("sub").textContent = `${c.n} emitters · gaps ${c.gaps} µm · ${c.pattern_label}`;
+    $("mOurs").innerHTML = `${fmt(c.ours_db)} <small>dB</small>`; $("mOursN").textContent = `mean-level floor of this layout ${fmt(c.floor_db)} dB`;
+    $("mPub").innerHTML = `${fmt(c.reported_db)} <small>dB</small>`; $("mPubN").textContent = c.reported_note;
+    $("mGain").innerHTML = `${(c.reported_db - c.ours_db).toFixed(2)} <small>dB lower</small>`;
+    $("apert").textContent = `aperture ${c.aperture.toFixed(1)} µm`;
+    $("cite").textContent = `Published design: ${c.citation}. ${c.assumptions}`;
+    const g = c.ours.slice(1).map((x, j) => x - c.ours[j]);
+    $("gaps").textContent = `gaps ${Math.min(...g).toFixed(2)} to ${Math.max(...g).toFixed(2)} µm, mean ${(c.aperture / (c.n - 1)).toFixed(2)} µm`;
+    try { history.replaceState(null, "", "#" + c.id); } catch (e) {}
+    draw();
+  }
+
+  function draw() {
+    const c = D.cases[ci]; const u0 = Math.sin(angle * Math.PI / 180);
+    $("angv").textContent = (angle < 0 ? "−" : "") + Math.abs(angle).toFixed(1) + "°";
+    const { ctx, w, h } = fit($("ff"));
+    const L = 40, R = 8, T = 8, B = 24, ymin = -40, ymax = 0;
+    const X = (t) => L + (t + 90) / 180 * (w - L - R), Y = (db) => T + (ymax - Math.max(ymin, Math.min(ymax, db))) / (ymax - ymin) * (h - T - B);
+    ctx.clearRect(0, 0, w, h); ctx.font = "11px " + css("--mono"); ctx.fillStyle = css("--ink2"); ctx.strokeStyle = css("--line"); ctx.lineWidth = 1;
+    for (let db = ymin; db <= ymax; db += 10) { ctx.beginPath(); ctx.moveTo(L, Y(db)); ctx.lineTo(w - R, Y(db)); ctx.stroke(); ctx.fillText(db, 6, Y(db) + 4); }
+    for (let t = -90; t <= 90; t += 30) { ctx.fillText(t + "°", X(t) - 10, h - 6); }
+    ctx.fillStyle = css("--soft"); ctx.fillRect(X(-c.steer), T, X(c.steer) - X(-c.steer), h - T - B);
+    ctx.setLineDash([5, 4]); ctx.strokeStyle = css("--pub"); ctx.beginPath(); ctx.moveTo(L, Y(c.reported_db)); ctx.lineTo(w - R, Y(c.reported_db)); ctx.stroke();
+    ctx.fillStyle = css("--pub"); ctx.fillText("published worst case", w - R - 150, Y(c.reported_db) - 5); ctx.setLineDash([]);
+    const n = Math.min(2400, Math.round((w - L - R) * 3)); TH = new Float64Array(n); const us = new Float64Array(n);
+    for (let i = 0; i < n; i++) { TH[i] = -90 + 180 * i / (n - 1); us[i] = Math.sin(TH[i] * Math.PI / 180); }
+    const cache = {};
+    for (const s of SERIES) {
+      if (!show[s.key] || !c[s.key]) continue;
+      const db = farfield(c, c[s.key], u0, us); cache[s.key] = db;
+      ctx.strokeStyle = css(s.color); ctx.lineWidth = s.w; ctx.beginPath();
+      for (let i = 0; i < n; i++) { const xx = X(TH[i]), yy = Y(db[i]); i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.stroke();
+    }
+    draw.cache = cache; draw.geo = { L, R, w };
+    const now = psl(c, c.ours, u0);
+    $("mNow").innerHTML = `${fmt(now)} <small>dB</small>`;
+    $("mNowN").textContent = c.pso ? `particle swarm here: ${fmt(psl(c, c.pso, u0))} dB` : "";
+    drawScan(); drawStrip();
+  }
+
+  function drawScan() {
+    const c = D.cases[ci]; const { ctx, w, h } = fit($("scan"));
+    const L = 40, R = 8, T = 8, B = 22; const vals = c.scan_db.concat([c.reported_db]);
+    const lo = Math.floor(Math.min(...vals) - 1), hi = Math.ceil(Math.max(...vals) + 0.5);
+    const X = (t) => L + (t + c.steer) / (2 * c.steer) * (w - L - R), Y = (v) => T + (hi - v) / (hi - lo) * (h - T - B);
+    ctx.clearRect(0, 0, w, h); ctx.font = "11px " + css("--mono"); ctx.strokeStyle = css("--line"); ctx.fillStyle = css("--ink2");
+    for (let v = lo; v <= hi; v += Math.max(1, Math.round((hi - lo) / 4))) { ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(w - R, Y(v)); ctx.stroke(); ctx.fillText(v, 6, Y(v) + 4); }
+    for (const t of [-c.steer, 0, c.steer]) ctx.fillText(t + "°", X(t) - 10, h - 5);
+    ctx.setLineDash([5, 4]); ctx.strokeStyle = css("--pub"); ctx.beginPath(); ctx.moveTo(L, Y(c.reported_db)); ctx.lineTo(w - R, Y(c.reported_db)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = css("--ours"); ctx.lineWidth = 2; ctx.beginPath();
+    c.scan_angles.forEach((t, i) => { i ? ctx.lineTo(X(t), Y(c.scan_db[i])) : ctx.moveTo(X(t), Y(c.scan_db[i])); }); ctx.stroke();
+    ctx.strokeStyle = css("--ink"); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X(angle), T); ctx.lineTo(X(angle), h - B); ctx.stroke();
+  }
+
+  function drawStrip() {
+    const c = D.cases[ci]; const { ctx, w, h } = fit($("strip"));
+    const L = 6, R = 6, X = (x) => L + x / c.aperture * (w - L - R);
+    ctx.clearRect(0, 0, w, h);
+    const rows = [["ours", "--ours", h * 0.3], ["pso", "--pso", h * 0.72]];
+    for (const [k, col, y] of rows) {
+      if (!c[k]) continue; ctx.strokeStyle = css(col); ctx.lineWidth = 1.2;
+      for (const x of c[k]) { ctx.beginPath(); ctx.moveTo(X(x), y - 9); ctx.lineTo(X(x), y + 9); ctx.stroke(); }
+    }
+  }
+
+  $("ff").addEventListener("pointermove", (e) => {
+    if (!draw.cache || !TH) return; const r = e.target.getBoundingClientRect(); const g = draw.geo;
+    const t = -90 + (e.clientX - r.left - g.L) / (g.w - g.L - g.R) * 180; if (t < -90 || t > 90) return;
+    const i = Math.round((t + 90) / 180 * (TH.length - 1));
+    $("tip").textContent = `θ = ${TH[i].toFixed(2)}°  ` + SERIES.filter((s) => draw.cache[s.key]).map((s) => `${s.label}: ${draw.cache[s.key][i].toFixed(1)} dB`).join("   ");
+  });
+  window.addEventListener("resize", draw);
+  try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw); } catch (e) {}
+  new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  const start = D.cases.findIndex((c) => "#" + c.id === location.hash);
+  select(start >= 0 ? start : 0);
+})();
+</script>
